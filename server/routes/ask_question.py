@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Form
 from fastapi.responses import JSONResponse
 from modules.llm import get_llm_chain
-from modules.query_handlers import query_chain
+from modules.graph import build_graph
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -48,10 +48,18 @@ async def ask_question(question: str = Form(...)):
 
         retriever = SimpleRetriever(docs)
         chain = get_llm_chain(retriever)
-        result = query_chain(chain, question)
 
-        logger.info("query successful")
-        return result
+        # Build and run the LangGraph pipeline instead of calling query_chain directly
+        graph = build_graph(retriever, chain)
+        result = graph.invoke({"question": question})
+
+        response = {
+            "response": result["answer"],
+            "sources": result.get("sources", [])
+        }
+
+        logger.info(f"query successful (intent: {result.get('intent')})")
+        return response
 
     except Exception as e:
         logger.exception("Error processing question")
