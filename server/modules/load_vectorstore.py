@@ -77,7 +77,12 @@ def load_vectorstore(uploaded_files):
             for i in range(len(chunks))
         ]
 
-        metadata = [chunk.metadata for chunk in chunks]
+        # FIX: include the actual chunk text in metadata, since /ask/
+        # reads it back via match["metadata"].get("text", "")
+        metadata = [
+            {**chunk.metadata, "text": chunk.page_content}
+            for chunk in chunks
+        ]
 
         # 3. Create embeddings
         print(
