@@ -1,8 +1,8 @@
 import logging 
 
 
-def setup_logger(name: "learn_RAG"):
-
+def setup_logger(name: str = "learn_RAG"):
+        
     logger=logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
 

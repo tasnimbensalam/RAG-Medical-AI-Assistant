@@ -3,15 +3,29 @@ from fastapi.responses import JSONResponse
 from modules.llm import get_llm_chain
 from modules.query_handlers import query_chain
 from langchain_core.documents import Document
-from langchain.schema import BaseRetriever
+from langchain_core.retrievers import BaseRetriever
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from pinecone import Pinecone
-from pydantic import Field
+from pydantic import Field, PrivateAttr
 from typing import List, Optional
 from logger import logger
 import os
 
-router=APIRouter()
+router = APIRouter()
+
+
+class SimpleRetriever(BaseRetriever):
+    tags: Optional[List[str]] = Field(default_factory=list)
+    metadata: Optional[dict] = Field(default_factory=dict)
+    _docs: List[Document] = PrivateAttr(default_factory=list)
+
+    def __init__(self, documents: List[Document], **kwargs):
+        super().__init__(**kwargs)
+        self._docs = documents
+
+    def _get_relevant_documents(self, query: str) -> List[Document]:
+        return self._docs
+
 
 @router.post("/ask/")
 async def ask_question(question: str = Form(...)):
@@ -20,8 +34,8 @@ async def ask_question(question: str = Form(...)):
 
         # Embed model + Pinecone setup
         pc = Pinecone(api_key=os.environ["PINECONE_API_KEY"])
-        index = pc.Index(os.environ["PINECONE_INDEX_NAME"])
-        embed_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+        index = pc.Index("medical-docs")
+        embed_model = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001", output_dimensionality=786)
         embedded_query = embed_model.embed_query(question)
         res = index.query(vector=embedded_query, top_k=3, include_metadata=True)
 
@@ -31,17 +45,6 @@ async def ask_question(question: str = Form(...)):
                 metadata=match["metadata"]
             ) for match in res["matches"]
         ]
-
-        class SimpleRetriever(BaseRetriever):
-            tags: Optional[List[str]] = Field(default_factory=list)
-            metadata: Optional[dict] = Field(default_factory=dict)
-
-            def __init__(self, documents: List[Document]):
-                super().__init__()
-                self._docs = documents
-
-            def _get_relevant_documents(self, query: str) -> List[Document]:
-                return self._docs
 
         retriever = SimpleRetriever(docs)
         chain = get_llm_chain(retriever)

@@ -17,6 +17,8 @@ pinecone
 # sentence-transformers
 # langchain-google-generative-ai
 langchain-google-genai
+langchain-text-splitters
+langchain-classic
 
 # PDF Parsing
 PyPDF  # backend for PyPDFLoader via langchain_community
