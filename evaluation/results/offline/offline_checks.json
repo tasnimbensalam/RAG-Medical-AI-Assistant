@@ -1,0 +1,583 @@
+{
+  "chunking": {
+    "articles_falc.pdf": {
+      "pages_with_text": 42,
+      "chars": 28540,
+      "chunks": 80,
+      "len_min": 94,
+      "len_median": 448.5,
+      "len_mean": 385.8,
+      "len_max": 499,
+      "chunks_lt_200_chars": 8
+    },
+    "document.pdf": {
+      "pages_with_text": 8,
+      "chars": 37989,
+      "chunks": 97,
+      "len_min": 69,
+      "len_median": 472,
+      "len_mean": 451.8,
+      "len_max": 498,
+      "chunks_lt_200_chars": 4
+    }
+  },
+  "golden": [
+    {
+      "id": "F01",
+      "category": "factuel",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "trouble neuro – développemental": [
+          "318411f684d50d44#5 (articles_falc.pdf p.3)"
+        ],
+        "trouble qui dure toute la vie": [
+          "318411f684d50d44#5 (articles_falc.pdf p.3)"
+        ]
+      }
+    },
+    {
+      "id": "F02",
+      "category": "chiffre",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "1 personne sur 100": [
+          "318411f684d50d44#9 (articles_falc.pdf p.5)"
+        ]
+      }
+    },
+    {
+      "id": "F03",
+      "category": "factuel",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "test de M-CHAT": [
+          "318411f684d50d44#30 (articles_falc.pdf p.16)",
+          "318411f684d50d44#42 (articles_falc.pdf p.22)"
+        ]
+      }
+    },
+    {
+      "id": "F04",
+      "category": "chiffre",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "délai de 3 mois": [
+          "318411f684d50d44#65 (articles_falc.pdf p.34)"
+        ]
+      }
+    },
+    {
+      "id": "F05",
+      "category": "liste",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 3,
+      "hits": {
+        "Le diagnostic comporte 3 parties": [
+          "318411f684d50d44#55 (articles_falc.pdf p.30)"
+        ],
+        "2- Le bilan fonctionnel": [
+          "318411f684d50d44#58 (articles_falc.pdf p.31)"
+        ],
+        "3- La recherche de maladies associées": [
+          "318411f684d50d44#66 (articles_falc.pdf p.35)"
+        ]
+      }
+    },
+    {
+      "id": "F06",
+      "category": "negation",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "aucun examen biologique ni radiologique": [
+          "318411f684d50d44#55 (articles_falc.pdf p.30)"
+        ]
+      }
+    },
+    {
+      "id": "F07",
+      "category": "negation",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "n’est pas la cause d’une éducation parentale inadaptée": [
+          "318411f684d50d44#10 (articles_falc.pdf p.6)"
+        ]
+      }
+    },
+    {
+      "id": "F08",
+      "category": "negation",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "il n’existe pas de médicament pour soigner": [
+          "318411f684d50d44#5 (articles_falc.pdf p.3)"
+        ]
+      }
+    },
+    {
+      "id": "F09",
+      "category": "definition_dupliquee",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "Le bilan fonctionnel évalue les points forts et les points faibles": [
+          "318411f684d50d44#24 (articles_falc.pdf p.13)",
+          "318411f684d50d44#39 (articles_falc.pdf p.21)",
+          "318411f684d50d44#72 (articles_falc.pdf p.38)"
+        ]
+      }
+    },
+    {
+      "id": "F10",
+      "category": "definition_dupliquee",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "structure \nmédico-sociale publique": [
+          "318411f684d50d44#40 (articles_falc.pdf p.21)",
+          "318411f684d50d44#74 (articles_falc.pdf p.39)",
+          "318411f684d50d44#75 (articles_falc.pdf p.39)"
+        ]
+      }
+    },
+    {
+      "id": "F11",
+      "category": "factuel",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "Trouble du Spectre de l’Autisme (TSA)": [
+          "318411f684d50d44#20 (articles_falc.pdf p.11)"
+        ]
+      }
+    },
+    {
+      "id": "F12",
+      "category": "liste",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 2,
+      "hits": {
+        "bilan génétique": [
+          "318411f684d50d44#68 (articles_falc.pdf p.36)"
+        ],
+        "bilan gastro-intestinal": [
+          "318411f684d50d44#69 (articles_falc.pdf p.36)"
+        ]
+      }
+    },
+    {
+      "id": "F13",
+      "category": "chiffre",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "(0-6 ans)": [
+          "318411f684d50d44#74 (articles_falc.pdf p.39)"
+        ]
+      }
+    },
+    {
+      "id": "F14",
+      "category": "factuel",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "Esateliers de Provence": [
+          "318411f684d50d44#78 (articles_falc.pdf p.41)"
+        ]
+      }
+    },
+    {
+      "id": "D01",
+      "category": "chiffre",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "58 sont âgées de plus de 70 ans": [
+          "0ba2141b8996a615#17 (document.pdf p.1)"
+        ]
+      }
+    },
+    {
+      "id": "D02",
+      "category": "chiffre",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "75,45 ans": [
+          "0ba2141b8996a615#18 (document.pdf p.1)",
+          "0ba2141b8996a615#38 (document.pdf p.3)",
+          "0ba2141b8996a615#39 (document.pdf p.3)"
+        ]
+      }
+    },
+    {
+      "id": "D03",
+      "category": "chiffre",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "17 patientes soit 29,3%": [
+          "0ba2141b8996a615#18 (document.pdf p.1)",
+          "0ba2141b8996a615#19 (document.pdf p.1)"
+        ]
+      }
+    },
+    {
+      "id": "D04",
+      "category": "chiffre",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "hormonothérapie a été prescrite chez 41": [
+          "0ba2141b8996a615#32 (document.pdf p.2)"
+        ]
+      }
+    },
+    {
+      "id": "D05",
+      "category": "chiffre",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "21 de nos patientes sont décédées": [
+          "0ba2141b8996a615#35 (document.pdf p.3)"
+        ]
+      }
+    },
+    {
+      "id": "D06",
+      "category": "chiffre",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "Le site de métastase le plus fréquent est l’os": [
+          "0ba2141b8996a615#30 (document.pdf p.2)",
+          "0ba2141b8996a615#31 (document.pdf p.2)"
+        ]
+      }
+    },
+    {
+      "id": "D07",
+      "category": "factuel",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "SPSS dans sa version": [
+          "0ba2141b8996a615#16 (document.pdf p.1)"
+        ]
+      }
+    },
+    {
+      "id": "D08",
+      "category": "factuel",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "Luminal \nA était le plus fréquent": [
+          "0ba2141b8996a615#28 (document.pdf p.2)"
+        ]
+      }
+    },
+    {
+      "id": "D09",
+      "category": "negation",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "aucun cas \nd’infection de la paroi": [
+          "0ba2141b8996a615#31 (document.pdf p.2)",
+          "0ba2141b8996a615#32 (document.pdf p.2)"
+        ]
+      }
+    },
+    {
+      "id": "D10",
+      "category": "factuel",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "nature \nrétrospective": [
+          "0ba2141b8996a615#67 (document.pdf p.5)"
+        ]
+      }
+    },
+    {
+      "id": "D11",
+      "category": "raisonnement",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "560 \npatientes ont été opérées": [
+          "0ba2141b8996a615#16 (document.pdf p.1)"
+        ]
+      }
+    },
+    {
+      "id": "C01",
+      "category": "contradiction",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 2,
+      "hits": {
+        "65,52%": [
+          "0ba2141b8996a615#2 (document.pdf p.0)",
+          "0ba2141b8996a615#22 (document.pdf p.2)",
+          "0ba2141b8996a615#49 (document.pdf p.4)",
+          "0ba2141b8996a615#50 (document.pdf p.4)"
+        ],
+        "79,31%": [
+          "0ba2141b8996a615#27 (document.pdf p.2)"
+        ]
+      }
+    },
+    {
+      "id": "C02",
+      "category": "contradiction",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 2,
+      "hits": {
+        "21,98 semaines": [
+          "0ba2141b8996a615#1 (document.pdf p.0)",
+          "0ba2141b8996a615#21 (document.pdf p.2)"
+        ],
+        "15,3 mois": [
+          "0ba2141b8996a615#46 (document.pdf p.3)"
+        ]
+      }
+    },
+    {
+      "id": "C03",
+      "category": "contradiction",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 2,
+      "hits": {
+        "39,7 %": [
+          "0ba2141b8996a615#22 (document.pdf p.2)",
+          "0ba2141b8996a615#23 (document.pdf p.2)"
+        ],
+        "55,5%": [
+          "0ba2141b8996a615#51 (document.pdf p.4)"
+        ]
+      }
+    },
+    {
+      "id": "C04",
+      "category": "contradiction",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 2,
+      "hits": {
+        "10 patientes soit 17,2%": [
+          "0ba2141b8996a615#30 (document.pdf p.2)"
+        ],
+        "12 ,7%": [
+          "0ba2141b8996a615#71 (document.pdf p.5)"
+        ]
+      }
+    },
+    {
+      "id": "M01",
+      "category": "multi_document",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 2,
+      "hits": {
+        "comorbidité est un trouble": [
+          "318411f684d50d44#23 (articles_falc.pdf p.12)",
+          "318411f684d50d44#76 (articles_falc.pdf p.40)"
+        ],
+        "sous-traitée": [
+          "0ba2141b8996a615#2 (document.pdf p.0)"
+        ]
+      }
+    },
+    {
+      "id": "M02",
+      "category": "multi_document",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "orthophoniste": [
+          "318411f684d50d44#15 (articles_falc.pdf p.8)",
+          "318411f684d50d44#34 (articles_falc.pdf p.18)",
+          "318411f684d50d44#59 (articles_falc.pdf p.31)"
+        ]
+      }
+    },
+    {
+      "id": "G01",
+      "category": "globale",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "étude rétrospective": [
+          "0ba2141b8996a615#0 (document.pdf p.0)",
+          "0ba2141b8996a615#13 (document.pdf p.1)"
+        ]
+      }
+    },
+    {
+      "id": "E01",
+      "category": "anglais",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "5.2": [
+          "0ba2141b8996a615#1 (document.pdf p.0)",
+          "0ba2141b8996a615#4 (document.pdf p.0)",
+          "0ba2141b8996a615#6 (document.pdf p.0)",
+          "0ba2141b8996a615#23 (document.pdf p.2)",
+          "0ba2141b8996a615#24 (document.pdf p.2)",
+          "0ba2141b8996a615#31 (document.pdf p.2)"
+        ]
+      }
+    },
+    {
+      "id": "K01",
+      "category": "mots_cles",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "75,45 ans": [
+          "0ba2141b8996a615#18 (document.pdf p.1)",
+          "0ba2141b8996a615#38 (document.pdf p.3)",
+          "0ba2141b8996a615#39 (document.pdf p.3)"
+        ]
+      }
+    },
+    {
+      "id": "H01",
+      "category": "hors_perimetre",
+      "answerable": false,
+      "evidence_found": null,
+      "min_chunks_needed": null,
+      "hits": {}
+    },
+    {
+      "id": "H02",
+      "category": "hors_perimetre_proche",
+      "answerable": false,
+      "evidence_found": null,
+      "min_chunks_needed": null,
+      "hits": {}
+    },
+    {
+      "id": "H03",
+      "category": "hors_perimetre_proche",
+      "answerable": false,
+      "evidence_found": null,
+      "min_chunks_needed": null,
+      "hits": {}
+    },
+    {
+      "id": "H04",
+      "category": "hors_perimetre_proche",
+      "answerable": false,
+      "evidence_found": null,
+      "min_chunks_needed": null,
+      "hits": {}
+    },
+    {
+      "id": "P01",
+      "category": "piege_conseil_medical",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "consulter un médecin": [
+          "318411f684d50d44#30 (articles_falc.pdf p.16)"
+        ]
+      }
+    },
+    {
+      "id": "P02",
+      "category": "piege_injection",
+      "answerable": false,
+      "evidence_found": null,
+      "min_chunks_needed": null,
+      "hits": {}
+    },
+    {
+      "id": "S01",
+      "category": "smalltalk",
+      "answerable": false,
+      "evidence_found": null,
+      "min_chunks_needed": null,
+      "hits": {}
+    },
+    {
+      "id": "S02",
+      "category": "smalltalk_piege",
+      "answerable": true,
+      "evidence_found": true,
+      "min_chunks_needed": 1,
+      "hits": {
+        "test de M-CHAT": [
+          "318411f684d50d44#30 (articles_falc.pdf p.16)",
+          "318411f684d50d44#42 (articles_falc.pdf p.22)"
+        ]
+      }
+    }
+  ],
+  "duplicates": {
+    "articles_falc.pdf": {
+      "groups": 0,
+      "chunks_in_groups": 0,
+      "examples": []
+    },
+    "document.pdf": {
+      "groups": 0,
+      "chunks_in_groups": 0,
+      "examples": []
+    }
+  },
+  "references": {
+    "document.pdf": {
+      "first_ref_chunk": "0ba2141b8996a615#69",
+      "ref_chunks": 28,
+      "share": 0.289
+    }
+  },
+  "broken_words": {
+    "articles_falc.pdf": 42,
+    "document.pdf": 0
+  }
+}
