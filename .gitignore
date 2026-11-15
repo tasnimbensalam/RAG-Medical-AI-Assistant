@@ -41,3 +41,10 @@ chroma_db/
 *.gguf
 *.bin
 models/
+
+
+.pytest_tmp/
+.tmp/
+.pytest_cache/
+__pycache__/
+.env
