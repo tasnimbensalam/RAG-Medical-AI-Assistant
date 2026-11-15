@@ -1,0 +1,12 @@
+{
+  "stamp": "20261105T153540Z",
+  "config": "prod",
+  "runs": 3,
+  "k": 5,
+  "diag_k": 10,
+  "gen_model": "openai/gpt-oss-120b",
+  "judge_model": "qwen/qwen3.8-27b",
+  "temperature": "défaut ChatGroq (0.7)",
+  "seed": null,
+  "golden_sha256": "f0db5cb26dfa03c1"
+}

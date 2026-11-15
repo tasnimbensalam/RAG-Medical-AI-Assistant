@@ -1,46 +1,48 @@
 """Analyse HORS LIGNE des runs (aucun appel d'API) : moyenne, écart-type entre runs, IC 95 %, stabilité.
 
-Lit prep-entretien/evaluation/results/runs/*.jsonl et écrit results/report.md.
+Lit results/runs_k{K}/*.jsonl et écrit results/report_runs_k{K}.md.
+
+Usage :
+  python analyze_runs.py --k 5                 # lit results/runs_k5
+  python analyze_runs.py chemin/vers/dossier  
+
+Les métriques de retrieval (hit@N, evidence_recall@N, mrr@N) sont détectées automatiquement
+dans les données : aucune valeur de k n'est codée en dur.
 
 Méthode :
   - chaque métrique est d'abord moyennée sur les questions éligibles DANS un run, puis on donne
     la moyenne et l'écart-type de ces moyennes ENTRE runs (variabilité run à run) ;
-  - IC 95 % par bootstrap sur les QUESTIONS (rééchantillonnage avec remise, 2000 tirages, seed fixe),
+  - un run est identifié par (stamp, numéro de run) : plusieurs fichiers d'une même config
+    ne sont donc jamais fusionnés par erreur ;
+  - IC 95 % par bootstrap sur les QUESTIONS ),
     car l'incertitude principale vient du petit nombre de questions, pas seulement du tirage du LLM ;
-  - IC de Wilson pour les proportions (hit@3, refus correct...) ;
   - stabilité : part des questions dont le score change entre deux runs, et part des réponses identiques.
 """
+import argparse
 import json
-import math
+import os
 import random
+import re
 import statistics
-import sys
 from collections import defaultdict
 from pathlib import Path
 
 EVAL_DIR = Path(__file__).resolve().parents[1]
-RUNS_DIR = Path(sys.argv[1]) if len(sys.argv) > 1 else EVAL_DIR / "results" / "runs"
-
-METRICS = {
-    "hit@3": lambda r: r.get("hit@3"),
-    "evidence_recall@3": lambda r: r.get("evidence_recall@3"),
-    "hit@10": lambda r: r.get("hit@10"),
-    "mrr@10": lambda r: r.get("mrr@10"),
-    "refusal_ok": lambda r: r.get("refusal_ok"),
-    "routing_ok": lambda r: r.get("routing_ok"),
-    "correctness (juge)": lambda r: (r.get("judge") or {}).get("correctness"),
-    "faithfulness (juge)": lambda r: (r.get("judge") or {}).get("faithfulness"),
-    "latency_s": lambda r: r.get("latency_s"),
-}
 
 
-def wilson(p, n, z=1.96):
-    if n == 0:
-        return (float("nan"), float("nan"))
-    d = 1 + z * z / n
-    c = (p + z * z / (2 * n)) / d
-    h = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / d
-    return (c - h, c + h)
+def build_metrics(rows):
+    """Détecte hit@N, evidence_recall@N, mrr@N présents dans les lignes, quel que soit k."""
+    keys = {key for r in rows for key in r}
+
+    def ordered(prefix):
+        found = [k for k in keys if re.fullmatch(rf"{prefix}@\d+", k)]
+        return sorted(found, key=lambda k: int(k.split("@")[1]))
+
+    names = ordered("hit") + ordered("evidence_recall") + ordered("mrr") + ["refusal_ok", "routing_ok"]
+    metrics = {n: (lambda r, n=n: r.get(n)) for n in names}
+    metrics["correctness (juge)"] = lambda r: (r.get("judge") or {}).get("correctness")
+    metrics["faithfulness (juge)"] = lambda r: (r.get("judge") or {}).get("faithfulness")
+    return metrics
 
 
 def bootstrap_ci(per_question, iters=2000, seed=0):
@@ -59,11 +61,11 @@ def as_num(v):
 def analyse(rows):
     by_run = defaultdict(list)
     for r in rows:
-        by_run[r["run"]].append(r)
+        by_run[(r["stamp"], r["run"])].append(r)
     lines = [f"Runs : {len(by_run)} | lignes : {len(rows)} | erreurs : {sum(1 for r in rows if r.get('error'))}", "",
-             "| Métrique | n questions | moyenne (sur runs) | écart-type entre runs | IC 95 % (bootstrap questions) | IC Wilson (proportion) |",
-             "|---|---|---|---|---|---|"]
-    for name, get in METRICS.items():
+             "| Métrique | n questions | moyenne (sur runs) | écart-type entre runs | IC 95 % (bootstrap questions) |",
+             "|---|---|---|---|---|"]
+    for name, get in build_metrics(rows).items():
         run_means, per_q = [], defaultdict(list)
         for run_rows in by_run.values():
             vals = [(r["id"], as_num(get(r))) for r in run_rows if as_num(get(r)) is not None]
@@ -77,10 +79,7 @@ def analyse(rows):
         mean = statistics.mean(run_means)
         sd = statistics.stdev(run_means) if len(run_means) > 1 else float("nan")
         lo, hi = bootstrap_ci(q_means)
-        binary = name != "latency_s" and all(v in (0.0, 1.0) for vs in per_q.values() for v in vs)
-        wl = wilson(mean, len(q_means)) if binary else (float("nan"), float("nan"))
-        lines.append(f"| {name} | {len(q_means)} | {mean:.3f} | {sd:.3f} | [{lo:.3f} ; {hi:.3f}] | "
-                     + (f"[{wl[0]:.3f} ; {wl[1]:.3f}]" if binary else "—") + " |")
+        lines.append(f"| {name} | {len(q_means)} | {mean:.3f} | {sd:.3f} | [{lo:.3f} ; {hi:.3f}] |")
 
     # Stabilité question par question
     per_q_corr, per_q_ans = defaultdict(list), defaultdict(list)
@@ -108,17 +107,23 @@ def analyse(rows):
 
 
 def main():
-    files = sorted(RUNS_DIR.glob("*.jsonl"))
+    ap = argparse.ArgumentParser()
+    ap.add_argument("runs_dir", nargs="?", help="dossier de runs (sinon results/runs_k{k})")
+    ap.add_argument("--k", type=int, default=int(os.getenv("RETRIEVER_K", "10")))
+    args = ap.parse_args()
+    runs_dir = Path(args.runs_dir) if args.runs_dir else EVAL_DIR / "results" / f"runs_k{args.k}"
+
+    files = sorted(runs_dir.glob("*.jsonl"))
     if not files:
-        print(f"Aucun fichier de run dans {RUNS_DIR}. Lancez d'abord run_eval.py --confirm.")
+        print(f"Aucun fichier de run dans {runs_dir}. Lancez d'abord run_eval.py --confirm.")
         return
     rows = [json.loads(line) for f in files for line in f.read_text().splitlines() if line.strip()]
-    report = ["# Rapport d'évaluation (généré par analyze_runs.py)", ""]
+    report = ["# Rapport d'évaluation (généré par analyze_runs.py)", "", f"Dossier analysé : `{runs_dir.name}`", ""]
     for config in sorted({r["config"] for r in rows}):
         stamps = sorted({r["stamp"] for r in rows if r["config"] == config})
         report += [f"## Config `{config}` — fichiers {stamps}", ""]
         report += analyse([r for r in rows if r["config"] == config]) + [""]
-    out = RUNS_DIR.parent / "report.md"  # à côté des runs analysés, jamais ailleurs
+    out = runs_dir.parent / f"report_{runs_dir.name}.md"
     out.write_text("\n".join(report))
     print("\n".join(report))
     print(f"\n→ {out}")

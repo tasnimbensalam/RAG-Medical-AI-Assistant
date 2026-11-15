@@ -21,7 +21,7 @@ def get_llm_chain(retriever):
 
     prompt = ChatPromptTemplate.from_template(
         """
-        You are an AI-powered assistant that helps users understand the medicaldocuments they uploaded.
+        You are an AI-powered assistant that helps users understand the medical documents they uploaded.
 
         Your job is to provide clear, accurate, and helpful responses based **only on the provided context**.
 

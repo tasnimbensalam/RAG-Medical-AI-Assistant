@@ -1,40 +1,38 @@
-"""Évaluation de bout en bout du RAG, sur le VRAI chemin de production (sans modifier le code du projet).
-
-SANS --confirm : mode « dry-run ». Aucun appel réseau. Affiche le plan et une ESTIMATION du coût.
-AVEC --confirm : appelle Groq (classification + génération + juge), Google (embeddings) et Pinecone (requêtes).
+"""Évaluation de bout en bout du RAG, sur le VRAI chemin de production.
 
 Ce que fait un run, pour chaque question du golden set :
   1. exécute le graphe de production : routes/ask_question.py reproduit à l'identique
-     (get_vectorstore().as_retriever(k=3) -> get_llm_chain -> build_graph -> invoke) ;
-  2. relance une recherche de diagnostic top-10 avec les scores (similarity_search_with_score) ;
-  3. calcule des métriques déterministes : routage, refus, hit@3, evidence_recall@3, hit@10, MRR@10 ;
-  4. (option) demande à un LLM juge : correctness (0, 0.5 ou 1) et faithfulness (0 à 1).
+     (get_vectorstore().as_retriever(k=K) -> get_llm_chain -> build_graph -> invoke) ;
+  2. relance une recherche de diagnostic top-DK avec les scores (similarity_search_with_score) ;
+  3. calcule des métriques déterministes : routage, refus, hit@K, evidence_recall@K, MRR@DK
+     (K = --k, DK = --diag-k, toujours >= K) ;
+  4.  demande à un LLM juge : correctness (0, 0.5 ou 1) et faithfulness (0 à 1).
+
+Les résultats sont écrits dans results/runs_k{K}/ : un dossier par valeur de k.
 
 Configurations :
   prod : paramètres du code actuel (température par défaut de ChatGroq = 0.7, sans seed)
-  det  : ChatGroq patché en mémoire avec temperature=0 et seed=42 (fichiers du projet inchangés)
+  det  : ChatGroq patché en mémoire avec temperature=0 et seed=42
 
-Exemples :
-  .venv/bin/python prep-entretien/evaluation/scripts/run_eval.py --config prod --runs 3            # dry-run
-  .venv/bin/python prep-entretien/evaluation/scripts/run_eval.py --config prod --runs 3 --confirm  # vrai run
+Sans --confirm, le script s'arrête avant tout appel d'API (dry-run).
 """
 import argparse
 import functools
 import hashlib
-import importlib.metadata as md
 import json
+import os
 import re
 import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[3]
-EVAL_DIR = ROOT / "prep-entretien" / "evaluation"
-sys.path.insert(0, str(ROOT / "server"))
-
+EVAL_DIR = Path(__file__).resolve().parents[1]
+ROOT = EVAL_DIR.parent
+sys.path.insert(0, str(ROOT / "server" if (ROOT / "server").exists() else ROOT))
 REFUSAL = "désolé, je n'ai pas trouvé"
-GEN_MODEL = "openai/gpt-oss-120b"  # llm.py:16 et graph.py:22
+GEN_MODEL = "openai/gpt-oss-120b"
+DEFAULT_K = int(os.getenv("RETRIEVER_K", "10"))
 
 JUDGE_PROMPT = """Tu es un évaluateur strict d'un système RAG. Réponds UNIQUEMENT par un objet JSON.
 
@@ -42,7 +40,7 @@ Question : {question}
 
 Réponse de référence (écrite à la main) : {expected}
 
-Passages fournis au système (seule source autorisée) :
+Passages fournis au système :
 {contexts}
 
 Réponse du système : {answer}
@@ -56,11 +54,13 @@ Réponse du système : {answer}
 JSON : {{"correctness": ..., "faithfulness": ..., "unsupported_claims": [...], "rationale": "..."}}"""
 
 
+# remplace l'apostrophe typographique, réduit les espaces, met en minuscules
 def norm(s: str) -> str:
     s = s.replace("’", "'")
     return re.sub(r"\s+", " ", s).strip().lower()
 
 
+# lit le golden set (jsonl), éventuellement filtré par IDs
 def load_golden(only):
     rows = [json.loads(line) for line in (EVAL_DIR / "golden_set.jsonl").read_text().splitlines() if line.strip()]
     return [r for r in rows if not only or r["id"] in only]
@@ -79,24 +79,7 @@ def first_rank(q, docs):
     return None
 
 
-def estimate(golden, runs, judge):
-    """Estimation grossière : 4 caractères ≈ 1 token ; sorties = hypothèses (modèle à raisonnement)."""
-    n = len(golden) * runs
-    questions = sum(1 for q in golden if q.get("expected_intent") != "smalltalk") * runs
-    est = {
-        "appels_groq_classification": n,
-        "appels_groq_generation (si intent=question)": questions,
-        "appels_groq_juge": questions if judge else 0,
-        "appels_google_embedding": n * 2 - (n - questions),
-        "requetes_pinecone": n * 2 - (n - questions),
-        "tokens_entree_estimes": n * 120 + questions * 700 + (questions * 1100 if judge else 0),
-        "tokens_sortie_estimes (raisonnement inclus, hypothèse)": n * 150 + questions * 450 + (questions * 200 if judge else 0),
-    }
-    return est
-
-
 def build_production_graph(config, k):
-    """Reproduit routes/ask_question.py:16-19. En config det, ChatGroq est patché en mémoire."""
     from langchain_groq import ChatGroq
     import modules.graph as graph_mod
     import modules.llm as llm_mod
@@ -120,31 +103,27 @@ def judge(q, answer, contexts, judge_model):
                                              contexts=ctx, answer=answer)).content
     except Exception as e:  # quota, modèle indisponible... : on garde la ligne, sans score
         return {"correctness": None, "faithfulness": None, "judge_error": f"{type(e).__name__}: {e}"}
-    # Les modèles à raisonnement (Qwen3) peuvent préfixer un bloc <think>...</think>.
     visible = re.sub(r"<think>.*?</think>", "", raw, flags=re.S)
     m = re.search(r"\{.*\}", visible, re.S)
     try:
-        return json.loads(m.group(0)) | {"judge_raw": raw}
-    except Exception:  # le juge n'a pas renvoyé de JSON valide : on le note, sans inventer de score
-        return {"correctness": None, "faithfulness": None, "judge_error": True, "judge_raw": raw}
+        return json.loads(m.group(0))
+    except Exception:  # le juge n'a pas renvoyé de JSON valide : on le note sans inventer de score
+        return {"correctness": None, "faithfulness": None, "judge_error": "JSON invalide"}
 
 
 def run_one(q, graph, vectorstore, args):
-    from langchain_core.callbacks import get_usage_metadata_callback
-
+    K, DK = args.k, args.diag_k
     rec = {"id": q["id"], "category": q["category"], "question": q["question"], "answerable": q["answerable"]}
     t0 = time.perf_counter()
-    with get_usage_metadata_callback() as cb:
-        try:
-            state = graph.invoke({"question": q["question"]})
-            rec["error"] = None
-        except Exception as e:  # on garde l'erreur dans les résultats (scénario « erreurs intermittentes »)
-            state, rec["error"] = {}, f"{type(e).__name__}: {e}"
+    try:
+        state = graph.invoke({"question": q["question"]})
+        rec["error"] = None
+    except Exception as e:  # on garde l'erreur dans les résultats (scénario « erreurs intermittentes »)
+        state, rec["error"] = {}, f"{type(e).__name__}: {e}"
     rec["latency_s"] = round(time.perf_counter() - t0, 3)
-    rec["usage"] = {m: dict(u) for m, u in cb.usage_metadata.items()}
 
     contexts = state.get("context", []) or []
-    rec.update(intent=state.get("intent"), answer=state.get("answer", ""), sources=state.get("sources", []),
+    rec.update(intent=state.get("intent"), answer=state.get("answer", ""),
                contexts=[{"id": d.id, "source": d.metadata.get("source"), "page": d.metadata.get("page"),
                           "text": d.page_content} for d in contexts])
     rec["refused"] = REFUSAL in norm(rec["answer"])
@@ -156,14 +135,16 @@ def run_one(q, graph, vectorstore, args):
         rec["refusal_ok"] = rec["refused"]
 
     if q["evidence"] and rec["intent"] == "question":
-        hits3 = evidence_hits(q, contexts)
-        rec["hit@3"] = any(hits3.values())
-        rec["evidence_recall@3"] = round(sum(hits3.values()) / len(hits3), 3)
-        diag = vectorstore.similarity_search_with_score(q["question"], k=args.diag_k)
-        docs10 = [d for d, _ in diag]
-        rank = first_rank(q, docs10)
-        rec[f"hit@{args.diag_k}"] = rank is not None
-        rec[f"mrr@{args.diag_k}"] = round(1 / rank, 3) if rank else 0.0
+        # hit@K / evidence_recall@K : sur les K contextes réellement fournis au générateur
+        hits = evidence_hits(q, contexts)
+        rec[f"hit@{K}"] = any(hits.values())
+        rec[f"evidence_recall@{K}"] = round(sum(hits.values()) / len(hits), 3)
+        # hit@DK / mrr@DK : diagnostic sur un top-DK plus large, avec les scores
+        diag = vectorstore.similarity_search_with_score(q["question"], k=DK)
+        docs_diag = [d for d, _ in diag]
+        rank = first_rank(q, docs_diag)
+        rec[f"hit@{DK}"] = rank is not None
+        rec[f"mrr@{DK}"] = round(1 / rank, 3) if rank else 0.0
         rec["diag_top"] = [{"id": d.id, "page": d.metadata.get("page"), "source": d.metadata.get("source"),
                             "score": round(s, 4)} for d, s in diag]
 
@@ -176,8 +157,9 @@ def main():
     p = argparse.ArgumentParser()
     p.add_argument("--config", choices=["prod", "det"], default="prod")
     p.add_argument("--runs", type=int, default=1)
-    p.add_argument("--k", type=int, default=3, help="top-k de production (ask_question.py:16)")
-    p.add_argument("--diag-k", type=int, default=10)
+    p.add_argument("--k", type=int, default=DEFAULT_K,
+                   help="top-k du retriever (défaut : RETRIEVER_K ou 10, comme ask_question.py)")
+    p.add_argument("--diag-k", type=int, default=10, help="top-k du diagnostic (forcé à >= k)")
     p.add_argument("--judge", action=argparse.BooleanOptionalAction, default=True)
     p.add_argument("--judge-model", default="qwen/qwen3.8-27b",
                    help="modèle juge DIFFÉRENT du générateur pour limiter l'auto-complaisance (à confirmer)")
@@ -185,19 +167,17 @@ def main():
     p.add_argument("--sleep", type=float, default=1.0, help="pause entre questions (quotas gratuits)")
     p.add_argument("--confirm", action="store_true", help="autorise les appels d'API (sinon dry-run)")
     args = p.parse_args()
+    args.diag_k = max(args.diag_k, args.k)  # le diagnostic doit couvrir au moins les k de production
 
     golden = load_golden(args.only)
     print(f"Golden set : {len(golden)} questions | config={args.config} | runs={args.runs} | k={args.k} "
-          f"| juge={'%s' % args.judge_model if args.judge else 'non'}")
-    print("ESTIMATION (non mesurée) :")
-    for key, val in estimate(golden, args.runs, args.judge).items():
-        print(f"  {key:55} {val}")
+          f"| diag_k={args.diag_k} | juge={args.judge_model if args.judge else 'non'}")
     if not args.confirm:
         print("\nDry-run : aucun appel effectué. Ajoutez --confirm pour lancer.")
         return
 
     graph, vectorstore = build_production_graph(args.config, args.k)
-    out_dir = EVAL_DIR / "results" / "runs"
+    out_dir = EVAL_DIR / "results" / f"runs_k{args.k}" 
     out_dir.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     meta = {
@@ -206,24 +186,22 @@ def main():
         "temperature": 0 if args.config == "det" else "défaut ChatGroq (0.7)",
         "seed": 42 if args.config == "det" else None,
         "golden_sha256": hashlib.sha256((EVAL_DIR / "golden_set.jsonl").read_bytes()).hexdigest()[:16],
-        "versions": {pkg: md.version(pkg) for pkg in ["langchain-core", "langchain-classic", "langgraph",
-                                                      "langchain-groq", "langchain-google-genai",
-                                                      "langchain-pinecone", "pinecone", "pypdf"]},
     }
     (out_dir / f"{stamp}_{args.config}.meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=2))
     path = out_dir / f"{stamp}_{args.config}.jsonl"
     with path.open("w") as f:
         for run in range(1, args.runs + 1):
             for q in golden:
-                rec = run_one(q, graph, vectorstore, args) | {"run": run, "config": args.config, "stamp": stamp}
+                rec = run_one(q, graph, vectorstore, args) | {"run": run, "config": args.config, "stamp": stamp,
+                                                              "k": args.k}
                 f.write(json.dumps(rec, ensure_ascii=False) + "\n")
                 f.flush()
                 j = rec.get("judge", {})
                 print(f"run {run} {q['id']:4} intent={rec['intent']!s:9} refus={rec['refused']!s:5} "
-                      f"hit@3={rec.get('hit@3')!s:5} correct={j.get('correctness')} faith={j.get('faithfulness')} "
-                      f"{rec['latency_s']}s {rec['error'] or ''}")
+                      f"hit@{args.k}={rec.get(f'hit@{args.k}')!s:5} correct={j.get('correctness')} "
+                      f"faith={j.get('faithfulness')} {rec['latency_s']}s {rec['error'] or ''}")
                 time.sleep(args.sleep)
-    print(f"\nRésultats : {path}\nAnalyse : .venv/bin/python prep-entretien/evaluation/scripts/analyze_runs.py")
+    print(f"\nRésultats : {path}\nAnalyse : .venv/bin/python evaluation/scripts/analyze_runs.py --k {args.k}")
 
 
 if __name__ == "__main__":

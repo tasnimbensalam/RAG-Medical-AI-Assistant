@@ -52,11 +52,11 @@ def test_retrieve_and_answer_collects_sources():
     assert state["answer"] == "Diabetes is a chronic condition."
     assert state["sources"] == ["diabetes.pdf", "guide.pdf"]
 
-
 def test_graph_smalltalk_skips_retrieval():
     chain = _fake_chain()
+    fake_retriever = MagicMock() 
     with patch.object(graph, "ChatGroq", return_value=_fake_llm("smalltalk")):
-        result = graph.build_graph(chain).invoke({"question": "hi"})
+        result = graph.build_graph(fake_retriever, chain).invoke({"question": "hi"})
     assert "vos documents" in result["answer"]
     assert result["sources"] == []
     chain.invoke.assert_not_called()
@@ -64,8 +64,9 @@ def test_graph_smalltalk_skips_retrieval():
 
 def test_graph_medical_uses_chain():
     chain = _fake_chain()
+    fake_retriever = MagicMock() 
     with patch.object(graph, "ChatGroq", return_value=_fake_llm("question")):
-        result = graph.build_graph(chain).invoke({"question": "What is diabetes?"})
+        result = graph.build_graph(fake_retriever, chain).invoke({"question": "What is diabetes?"})
     assert result["answer"] == "Diabetes is a chronic condition."
     assert result["sources"] == ["diabetes.pdf", "guide.pdf"]
     chain.invoke.assert_called_once_with({"input": "What is diabetes?"})

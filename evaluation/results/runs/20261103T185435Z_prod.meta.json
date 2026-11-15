@@ -1,22 +1,22 @@
 {
-  "stamp": "20261101T131124Z",
+  "stamp": "20261103T185435Z",
   "config": "prod",
   "runs": 1,
   "k": 3,
   "diag_k": 10,
   "gen_model": "openai/gpt-oss-120b",
-  "judge_model": null,
-  "temperature": "dÃ©faut ChatGroq (0.7)",
+  "judge_model": "qwen/qwen3.8-27b",
+  "temperature": "défaut ChatGroq (0.7)",
   "seed": null,
   "golden_sha256": "d20929ff8fd36cc7",
   "versions": {
-    "langchain-core": "1.6.5",
+    "langchain-core": "1.7.4",
     "langchain-classic": "1.0.8",
-    "langgraph": "1.2.12",
+    "langgraph": "1.2.19",
     "langchain-groq": "1.1.3",
-    "langchain-google-genai": "4.4.0",
+    "langchain-google-genai": "3.2.0",
     "langchain-pinecone": "0.2.13",
     "pinecone": "7.3.0",
-    "pypdf": "6.19.0"
+    "pypdf": "6.21.4"
   }
 }

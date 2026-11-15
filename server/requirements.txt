@@ -37,4 +37,8 @@ loguru
 
 
 
+pandas
+matplotlib
+seaborn
+
 #  uv pip install -r requirements.txt

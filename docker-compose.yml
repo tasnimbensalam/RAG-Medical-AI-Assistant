@@ -12,6 +12,7 @@ services:
       - ./server/.env
     volumes:
       - ./server/uploaded_docs:/app/uploaded_docs
+      - ./evaluation:/app/evaluation
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 5s

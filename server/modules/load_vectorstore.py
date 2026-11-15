@@ -24,7 +24,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pinecone import Pinecone, ServerlessSpec
 from pypdf import PdfReader
 from pypdf.errors import DependencyError, PdfReadError
-
+from modules.text_cleaning import clean_pages
 from logger import logger
 
 load_dotenv()
@@ -45,10 +45,12 @@ TOPIC_SAMPLE_PAGES = 5
 TOPIC_SAMPLE_CHARS = 600
 
 
+# Erreur « métier » : PDF inutilisable (scanné, protégé, invalide, hors sujet). Son message est montré à l'utilisateur.
 class PDFProcessingError(ValueError):
     """The PDF can't be indexed (scanned, encrypted, corrupted...). Message is shown to the user."""
 
 
+# Point d'entrée de l'upload : sauvegarde chaque PDF, l'indexe, et renvoie les succès et les erreurs par fichier.
 def load_vectorstore(uploaded_files: list[UploadFile]) -> dict:
     """Save, split, embed and upsert each PDF. Returns {"processed": {name: chunks}, "errors": {name: reason}}."""
     os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -71,8 +73,16 @@ def load_vectorstore(uploaded_files: list[UploadFile]) -> dict:
     return {"processed": processed, "errors": errors}
 
 
+# Indexe un PDF : lecture, contrôle du sujet médical, découpage en chunks (500 caractères, 100 de chevauchement),
+# remplacement de l'ancienne version, puis envoi des embeddings à Pinecone par lots.
 def index_pdf(file_path: Path) -> int:
     documents = load_pdf(file_path)
+    # Nettoyage du texte extrait : en-têtes / pieds de page répétés, numéros de page,
+    # mots coupés en fin de ligne, espaces en trop. Une page reste une page (métadonnées conservées).
+    cleaned, stats = clean_pages([d.page_content for d in documents])
+    for doc, text in zip(documents, cleaned):
+        doc.page_content = text
+    logger.info(f"{file_path.name}: nettoyage -> {stats}")
     documents = [d for d in documents if d.page_content.strip()]
     if not documents:
         raise PDFProcessingError(
@@ -114,6 +124,8 @@ def index_pdf(file_path: Path) -> int:
     return len(chunks)
 
 
+# Lit le PDF page par page avec pypdf (gère les PDF « chiffrés » à mot de passe vide) ; une page = un Document
+# avec sa source et son numéro de page en métadonnées.
 def load_pdf(file_path) -> list[Document]:
     try:
         reader = PdfReader(str(file_path))
@@ -133,6 +145,8 @@ def load_pdf(file_path) -> list[Document]:
     ]
 
 
+# Filtre d'entrée : montre quelques extraits du PDF à un LLM (température 0) qui répond yes/no selon que
+# le document est médical. Les consignes cachées dans le PDF sont ignorées (protection contre l'injection).
 def is_medical_document(documents: list[Document]) -> bool:
     """Ask an LLM whether excerpts spread over the PDF come from a medical / health document."""
     pages = [d.page_content.strip() for d in documents]
@@ -149,6 +163,8 @@ def is_medical_document(documents: list[Document]) -> bool:
     return llm.invoke(prompt).content.strip().lower().startswith("yes")
 
 
+# Supprime de Pinecone tous les chunks d'un fichier (repérés par leur préfixe d'ID) pour éviter les doublons
+# quand on ré-uploade une nouvelle version.
 def delete_document(filename: str) -> int:
     """Remove every chunk previously indexed for this filename. Returns the count removed."""
     index = get_vectorstore().index
@@ -160,12 +176,14 @@ def delete_document(filename: str) -> int:
     return removed
 
 
+# Fabrique le préfixe d'ID d'un fichier (hash du nom) : même nom = même préfixe, donc remplacement possible.
 def doc_id_prefix(filename: str) -> str:
     # Pinecone IDs must be ASCII, so derive the prefix from a hash of the filename.
     # Same filename -> same prefix, which lets a re-upload replace the old chunks.
     return hashlib.sha1(filename.encode()).hexdigest()[:16] + "#"
 
 
+# Se connecte à Pinecone (crée l'index s'il n'existe pas) et prépare les embeddings Gemini ; mis en cache
 @lru_cache
 def get_vectorstore() -> PineconeVectorStore:
     pc = Pinecone(api_key=os.environ["PINECONE_API_KEY"])

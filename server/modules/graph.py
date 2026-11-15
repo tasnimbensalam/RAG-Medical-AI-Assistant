@@ -58,7 +58,7 @@ def direct_response(state: GraphState) -> GraphState:
     return state
 
 
-def build_graph( chain):
+def build_graph(retriever, chain):
     graph = StateGraph(GraphState)
 
     graph.add_node("classify_intent", classify_intent)

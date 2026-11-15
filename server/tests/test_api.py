@@ -31,8 +31,7 @@ def test_ask_returns_answer_and_sources(client):
 
     assert r.status_code == 200
     assert r.json() == {"response": "Some answer", "sources": ["doc.pdf"]}
-    vectorstore.as_retriever.assert_called_once_with(search_kwargs={"k": 3})
-
+    vectorstore.as_retriever.assert_called_once_with(search_kwargs={"k": ask_module.TOP_K})
 
 def test_ask_returns_500_on_failure(client):
     with patch.object(ask_module, "get_vectorstore", side_effect=RuntimeError("pinecone down")):
